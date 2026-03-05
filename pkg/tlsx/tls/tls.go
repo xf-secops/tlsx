@@ -143,6 +143,16 @@ func (c *Client) ConnectWithOptions(hostname, ip, port string, options clients.C
 	tlsVersion := versionToTLSVersionString[connectionState.Version]
 	tlsCipher := tls.CipherSuiteName(connectionState.CipherSuite)
 
+	// Read the negotiated key exchange group (available from Go 1.24+).
+	// In TLS 1.3 the cipher suite name no longer encodes the key agreement
+	// mechanism (e.g. both X25519 and X25519MLKEM768 report the same
+	// TLS_AES_128_GCM_SHA256 suite), so CurveID is the only way to distinguish
+	// classical from post-quantum key exchange.
+	keyExchange := ""
+	if connectionState.CurveID != 0 {
+		keyExchange = connectionState.CurveID.String()
+	}
+
 	leafCertificate := connectionState.PeerCertificates[0]
 	certificateChain := connectionState.PeerCertificates[1:]
 
@@ -160,6 +170,7 @@ func (c *Client) ConnectWithOptions(hostname, ip, port string, options clients.C
 		Port:                port,
 		Version:             tlsVersion,
 		Cipher:              tlsCipher,
+		KeyExchange:         keyExchange,
 		TLSConnection:       "ctls",
 		CertificateResponse: clients.Convertx509toResponse(c.options, hostname, leafCertificate, c.options.Cert),
 		ServerName:          config.ServerName,
