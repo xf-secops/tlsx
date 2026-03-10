@@ -429,3 +429,38 @@ func Test_CTLogsModeOutputOptions(t *testing.T) {
 		})
 	}
 }
+
+// Test_CommaSeperatedInputList_normalizeAndQueueInputs verifies that comma-separated
+// targets on a single line in an input file (-l) are split and queued individually,
+// matching the behaviour of the -u flag (#859).
+func Test_CommaSeperatedInputList_normalizeAndQueueInputs(t *testing.T) {
+	// Write a temporary file with comma-separated entries on a single line.
+	f, err := os.CreateTemp("", "tlsx-test-*.txt")
+	require.NoError(t, err)
+	defer os.Remove(f.Name())
+
+	_, err = f.WriteString("example.com,scanme.sh\n")
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	options := &clients.Options{
+		Ports:     []string{"443"},
+		InputList: f.Name(),
+	}
+	runner := &Runner{options: options}
+	runner.hasStdin = false
+
+	inputs := make(chan taskInput, 10)
+	err = runner.normalizeAndQueueInputs(inputs)
+	require.NoError(t, err)
+	close(inputs)
+
+	var hosts []string
+	for task := range inputs {
+		hosts = append(hosts, task.host)
+	}
+
+	assert.Contains(t, hosts, "example.com", "first comma-separated host should be queued")
+	assert.Contains(t, hosts, "scanme.sh", "second comma-separated host should be queued")
+	assert.Len(t, hosts, 2, "exactly two hosts should be queued from a single comma-separated line")
+}

@@ -440,7 +440,12 @@ func (r *Runner) normalizeAndQueueInputs(inputs chan taskInput) error {
 		for scanner.Scan() {
 			text := scanner.Text()
 			if text != "" {
-				r.processInputItem(text, inputs)
+				// Support comma-separated targets on a single line, matching the -u flag behaviour.
+				for _, item := range strings.Split(text, ",") {
+					if item = strings.TrimSpace(item); item != "" {
+						r.processInputItem(item, inputs)
+					}
+				}
 			}
 		}
 	}
@@ -449,7 +454,12 @@ func (r *Runner) normalizeAndQueueInputs(inputs chan taskInput) error {
 		for scanner.Scan() {
 			text := scanner.Text()
 			if text != "" {
-				r.processInputItem(text, inputs)
+				// Support comma-separated targets on a single line, matching the -u flag behaviour.
+				for _, item := range strings.Split(text, ",") {
+					if item = strings.TrimSpace(item); item != "" {
+						r.processInputItem(item, inputs)
+					}
+				}
 			}
 		}
 	}
