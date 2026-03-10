@@ -430,10 +430,10 @@ func Test_CTLogsModeOutputOptions(t *testing.T) {
 	}
 }
 
-// Test_CommaSeperatedInputList_normalizeAndQueueInputs verifies that comma-separated
+// Test_CommaSeparatedInputList_normalizeAndQueueInputs verifies that comma-separated
 // targets on a single line in an input file (-l) are split and queued individually,
 // matching the behaviour of the -u flag (#859).
-func Test_CommaSeperatedInputList_normalizeAndQueueInputs(t *testing.T) {
+func Test_CommaSeparatedInputList_normalizeAndQueueInputs(t *testing.T) {
 	// Write a temporary file with comma-separated entries on a single line.
 	f, err := os.CreateTemp("", "tlsx-test-*.txt")
 	require.NoError(t, err)
