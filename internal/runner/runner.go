@@ -255,13 +255,20 @@ func (r *Runner) Execute() error {
 		return r.executeCTLogsMode()
 	}
 
+	if r.options.Concurrency <= 0 {
+		r.options.Concurrency = 1
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Create the worker goroutines for processing
 	inputs := make(chan taskInput, r.options.Concurrency)
 	wg := &sync.WaitGroup{}
 
 	for i := 0; i < r.options.Concurrency; i++ {
 		wg.Add(1)
-		go r.processInputElementWorker(inputs, wg)
+		go r.processInputElementWorker(ctx, inputs, wg)
 	}
 	// Queue inputs
 	if err := r.normalizeAndQueueInputs(inputs); err != nil {
@@ -375,7 +382,7 @@ func (r *Runner) executeCTLogsMode() error {
 }
 
 // processInputElementWorker processes an element from input
-func (r *Runner) processInputElementWorker(inputs chan taskInput, wg *sync.WaitGroup) {
+func (r *Runner) processInputElementWorker(ctx context.Context, inputs chan taskInput, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	tlsxService, err := tlsx.New(r.options)
@@ -384,36 +391,44 @@ func (r *Runner) processInputElementWorker(inputs chan taskInput, wg *sync.WaitG
 		return
 	}
 
-	for task := range inputs {
-		if r.options.Delay != "" {
-			duration, err := time.ParseDuration(r.options.Delay)
-			if err != nil {
-				gologger.Error().Msgf("error parsing delay %s: %s", r.options.Delay, err)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case task, ok := <-inputs:
+			if !ok {
+				return
 			}
-			time.Sleep(duration)
-		}
-		if r.options.Verbose {
-			gologger.Info().Msgf("Processing input %s:%s", task.host, task.port)
-		}
+			if r.options.Delay != "" {
+				duration, err := time.ParseDuration(r.options.Delay)
+				if err != nil {
+					gologger.Error().Msgf("error parsing delay %s: %s", r.options.Delay, err)
+				}
+				time.Sleep(duration)
+			}
+			if r.options.Verbose {
+				gologger.Info().Msgf("Processing input %s:%s", task.host, task.port)
+			}
 
-		response, err := tlsxService.ConnectWithOptions(task.host, task.ip, task.port, clients.ConnectOptions{SNI: task.sni})
-		if err != nil {
-			gologger.Warning().Msgf("Could not connect input %s: %s", task.Address(), err)
-		}
+			response, err := tlsxService.ConnectWithOptions(task.host, task.ip, task.port, clients.ConnectOptions{SNI: task.sni})
+			if err != nil {
+				gologger.Warning().Msgf("Could not connect input %s: %s", task.Address(), err)
+			}
 
-		if response == nil {
-			continue
-		}
+			if response == nil {
+				continue
+			}
 
-		if err := r.outputWriter.Write(response); err != nil {
-			gologger.Warning().Msgf("Could not write output %s: %s", task.Address(), err)
-			continue
-		}
+			if err := r.outputWriter.Write(response); err != nil {
+				gologger.Warning().Msgf("Could not write output %s: %s", task.Address(), err)
+				continue
+			}
 
-		// Send to PDCP if enabled
-		if r.pdcpWriter != nil {
-			callback := r.pdcpWriter.GetWriterCallback()
-			callback(response)
+			// Send to PDCP if enabled
+			if r.pdcpWriter != nil {
+				callback := r.pdcpWriter.GetWriterCallback()
+				callback(response)
+			}
 		}
 	}
 }
