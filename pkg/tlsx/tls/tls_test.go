@@ -131,7 +131,7 @@ func TestHandshakeTimeoutLeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer l.Close() //nolint:errcheck
 
 	var conns []net.Conn
 	var mu sync.Mutex
@@ -200,7 +200,7 @@ func TestHighConcurrencyTimeouts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer l.Close() //nolint:errcheck
 
 	var conns []net.Conn
 	var mu sync.Mutex

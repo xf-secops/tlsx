@@ -19,7 +19,7 @@ func TestHandshakeTimeoutLeak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer l.Close() //nolint:errcheck
 
 	var conns []net.Conn
 	var mu sync.Mutex
@@ -76,7 +76,7 @@ func TestHandshakeTimeoutLeak(t *testing.T) {
 		
 		config, err := client.getConfig(host, host, port, clients.ConnectOptions{})
 		if err != nil {
-			rawConn.Close()
+			rawConn.Close() //nolint:errcheck
 			cancel()
 			continue
 		}
@@ -105,7 +105,7 @@ func TestUnresponsiveServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer l.Close() //nolint:errcheck
 
 	var conns []net.Conn
 	var mu sync.Mutex
@@ -154,7 +154,7 @@ func TestUnresponsiveServer(t *testing.T) {
 	}
 	config, err := client.getConfig(host, host, port, clients.ConnectOptions{})
 	if err != nil {
-		rawConn.Close()
+		rawConn.Close() //nolint:errcheck
 		t.Fatal(err)
 	}
 	tlsConn := tls.Client(rawConn, config)
@@ -176,7 +176,7 @@ func TestSlowServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer l.Close()
+	defer l.Close() //nolint:errcheck
 
 	go func() {
 		conn, _ := l.Accept()
@@ -216,7 +216,7 @@ func TestSlowServer(t *testing.T) {
 	}
 	config, err := client.getConfig(host, host, port, clients.ConnectOptions{})
 	if err != nil {
-		rawConn.Close()
+		rawConn.Close() //nolint:errcheck
 		t.Fatal(err)
 	}
 	tlsConn := tls.Client(rawConn, config)

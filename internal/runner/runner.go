@@ -217,7 +217,7 @@ func (r *Runner) Close() error {
 				if err != nil {
 					gologger.Warning().Msgf("Could not open file for upload: %s", err)
 				} else {
-					defer file.Close()
+					defer file.Close() //nolint:errcheck
 					scanner := bufio.NewScanner(file)
 					callback := pdcpWriter.GetWriterCallback()
 					for scanner.Scan() {
@@ -453,22 +453,30 @@ func (r *Runner) normalizeAndQueueInputs(inputs chan taskInput) error {
 
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
-			text := scanner.Text()
-			if text != "" {
-				r.processInputItem(text, inputs)
+			if text := scanner.Text(); text != "" {
+				r.processCommaSeparatedTargets(text, inputs)
 			}
 		}
 	}
 	if r.hasStdin {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			text := scanner.Text()
-			if text != "" {
-				r.processInputItem(text, inputs)
+			if text := scanner.Text(); text != "" {
+				r.processCommaSeparatedTargets(text, inputs)
 			}
 		}
 	}
 	return nil
+}
+
+// processCommaSeparatedTargets splits a line by comma and queues each non-empty target,
+// matching the -u flag behaviour for comma-separated input (#859).
+func (r *Runner) processCommaSeparatedTargets(text string, inputs chan taskInput) {
+	for _, item := range strings.Split(text, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			r.processInputItem(item, inputs)
+		}
+	}
 }
 
 // resolveFQDN resolves a FQDN and returns the IP addresses
