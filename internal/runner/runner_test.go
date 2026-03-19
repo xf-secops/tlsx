@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"os"
 	"testing"
 
 	"github.com/projectdiscovery/dnsx/libs/dnsx"

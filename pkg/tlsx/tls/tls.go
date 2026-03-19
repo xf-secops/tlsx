@@ -260,14 +260,14 @@ func (c *Client) EnumerateCiphers(hostname, ip, port string, options clients.Con
 			if err != nil || baseConn == nil {
 				return
 			}
-			defer baseConn.Close()
+			defer baseConn.Close() //nolint:errcheck
 
 			stats.IncrementCryptoTLSConnections()
 
 			cfg := baseCfg.Clone()
 			cfg.CipherSuites = []uint16{tlsCiphers[v]}
 			conn := tls.Client(baseConn, cfg)
-			defer conn.Close()
+			defer conn.Close() //nolint:errcheck
 
 			errChan := make(chan error, 1)
 			go func() {
