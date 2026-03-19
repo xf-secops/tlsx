@@ -437,7 +437,7 @@ func Test_CommaSeparatedInputList_normalizeAndQueueInputs(t *testing.T) {
 	// Write a temporary file with comma-separated entries on a single line.
 	f, err := os.CreateTemp("", "tlsx-test-*.txt")
 	require.NoError(t, err)
-	defer os.Remove(f.Name())
+	defer os.Remove(f.Name()) //nolint:errcheck
 
 	_, err = f.WriteString("example.com,scanme.sh\n")
 	require.NoError(t, err)

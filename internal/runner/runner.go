@@ -217,7 +217,7 @@ func (r *Runner) Close() error {
 				if err != nil {
 					gologger.Warning().Msgf("Could not open file for upload: %s", err)
 				} else {
-					defer file.Close()
+					defer file.Close() //nolint:errcheck
 					scanner := bufio.NewScanner(file)
 					callback := pdcpWriter.GetWriterCallback()
 					for scanner.Scan() {
