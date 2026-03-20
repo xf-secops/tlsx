@@ -78,7 +78,7 @@ func TestClientCertRequired(t *testing.T) {
 
 			parsedUrl, err := url.Parse(server.URL)
 			if err != nil {
-				t.Errorf("error parsing test server url: %s", err)
+				t.Fatalf("error parsing test server url: %s", err)
 			}
 
 			connectOpts := clients.ConnectOptions{
@@ -103,9 +103,7 @@ func TestClientCertRequired(t *testing.T) {
 			host := parsedUrl.Hostname()
 			resp, err := client.ConnectWithOptions(host, host, parsedUrl.Port(), connectOpts)
 			if err != nil {
-				// We don't fail here because some pre-existing failures are expected in some environments
-				t.Logf("client ConnectWithOptions failed (pre-existing issue?): %s", err)
-				return
+				t.Fatalf("client ConnectWithOptions call failed: %s", err)
 			}
 
 			actualResult := resp.ClientCertRequired
