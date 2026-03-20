@@ -74,7 +74,7 @@ func TestClientCertRequired(t *testing.T) {
 
 			parsedUrl, err := url.Parse(server.URL)
 			if err != nil {
-				t.Errorf("error parsing test server url: %s", err)
+				t.Fatalf("error parsing test server url: %s", err)
 			}
 
 			connectOpts := clients.ConnectOptions{
@@ -83,7 +83,7 @@ func TestClientCertRequired(t *testing.T) {
 
 			dialer, err := fastdialer.NewDialer(fastdialer.DefaultOptions)
 			if err != nil {
-				t.Errorf("error initializing dialer: %s", err)
+				t.Fatalf("error initializing dialer: %s", err)
 			}
 
 			clientOpts := &clients.Options{
@@ -92,13 +92,13 @@ func TestClientCertRequired(t *testing.T) {
 
 			client, err := tls.New(clientOpts)
 			if err != nil {
-				t.Errorf("error initializing ztls client: %s", err)
+				t.Fatalf("error initializing tls client: %s", err)
 			}
 
 			host := parsedUrl.Hostname()
 			resp, err := client.ConnectWithOptions(host, host, parsedUrl.Port(), connectOpts)
 			if err != nil {
-				t.Errorf("client ConnectWithOptions call failed: %s", err)
+				t.Fatalf("client ConnectWithOptions call failed: %s", err)
 			}
 
 			actualResult := resp.ClientCertRequired

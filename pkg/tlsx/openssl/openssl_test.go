@@ -187,12 +187,12 @@ func TestClientCertRequired(t *testing.T) {
 
 			args, err := opts.Args()
 			if err != nil {
-				t.Error(err.Error())
+				t.Fatalf("failed to build args: %s", err)
 			}
 
 			result, err := execOpenSSL(context.Background(), args)
 			if err != nil {
-				t.Errorf("failed to execute cmd:%v\ngot error %v", result.Command, err)
+				t.Fatalf("failed to execute cmd: %v", err)
 			}
 
 			actualResult := isClientCertRequired(result.Stderr)

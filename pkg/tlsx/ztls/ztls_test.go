@@ -63,7 +63,7 @@ func TestClientCertRequired(t *testing.T) {
 
 			parsedUrl, err := url.Parse(server.URL)
 			if err != nil {
-				t.Errorf("error parsing test server url: %s", err)
+				t.Fatalf("error parsing test server url: %s", err)
 			}
 
 			connectOpts := clients.ConnectOptions{
@@ -72,7 +72,7 @@ func TestClientCertRequired(t *testing.T) {
 
 			dialer, err := fastdialer.NewDialer(fastdialer.DefaultOptions)
 			if err != nil {
-				t.Errorf("error initializing dialer: %s", err)
+				t.Fatalf("error initializing dialer: %s", err)
 			}
 
 			clientOpts := &clients.Options{
@@ -81,13 +81,13 @@ func TestClientCertRequired(t *testing.T) {
 
 			client, err := ztls.New(clientOpts)
 			if err != nil {
-				t.Errorf("error initializing ztls client: %s", err)
+				t.Fatalf("error initializing ztls client: %s", err)
 			}
 
 			host := parsedUrl.Hostname()
 			resp, err := client.ConnectWithOptions(host, host, parsedUrl.Port(), connectOpts)
 			if err != nil {
-				t.Errorf("client ConnectWithOptions call failed: %s", err)
+				t.Fatalf("client ConnectWithOptions call failed: %s", err)
 			}
 
 			actualResult := resp.ClientCertRequired
@@ -96,7 +96,7 @@ func TestClientCertRequired(t *testing.T) {
 				t.Errorf("expected isClientCertRequired = %t but received nil", *tc.expectedResult)
 			} else if tc.expectedResult == nil && actualResult != nil {
 				t.Errorf("expected isClientCertRequired = nil but received %t", *actualResult)
-			} else if *tc.expectedResult != *actualResult {
+			} else if tc.expectedResult != nil && actualResult != nil && *tc.expectedResult != *actualResult {
 				t.Errorf("expected isClientCertRequired = %t but received %t", *tc.expectedResult, *actualResult)
 			}
 		})
