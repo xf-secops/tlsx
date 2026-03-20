@@ -210,7 +210,7 @@ type Response struct {
 	// In TLS 1.3 the cipher suite name no longer encodes the key agreement
 	// mechanism; this field exposes ConnectionState.CurveID so security teams
 	// can audit post-quantum readiness and classical-curve usage.
-	// Populated from Go 1.24+ which sets CurveID after the handshake.
+	// Populated from Go 1.25+ which sets CurveID after the handshake.
 	KeyExchange string `json:"key_exchange,omitempty"`
 	// CertificateResponse is the leaf certificate embedded in json
 	*CertificateResponse `json:",inline"`
