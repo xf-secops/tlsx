@@ -178,22 +178,19 @@ func TestClientCertRequired(t *testing.T) {
 
 			args, err := opts.Args()
 			if err != nil {
-				t.Error(err.Error())
+				t.Fatalf("failed to build args: %s", err)
 			}
 
 			result, err := execOpenSSL(context.Background(), args)
 			if err != nil {
-				t.Skipf("openssl execution failed (environment issue): %s", err)
+				t.Fatalf("failed to execute openssl: %v", err)
 			}
 			if result == nil || result.Stderr == "" {
-				t.Skip("openssl returned no output, skipping")
+				t.Fatal("openssl returned no output")
 			}
 
 			actualResult := isClientCertRequired(result.Stderr)
 			if actualResult != tc.expectedResult {
-				if tc.expectedResult && strings.Contains(result.Stderr, "handshake failure") {
-					t.Skipf("openssl got generic handshake failure instead of specific cert alert (environment-dependent)")
-				}
 				t.Errorf("expected isClientCertRequired = %t but received %t\nstderr: %s", tc.expectedResult, actualResult, result.Stderr)
 			}
 		})
