@@ -125,6 +125,9 @@ func New(options *clients.Options) (*Runner, error) {
 	dnsOptions := dnsx.DefaultOptions
 	dnsOptions.MaxRetries = runner.options.Retries
 	dnsOptions.Hostsfile = true
+	if len(options.Resolvers) > 0 {
+		dnsOptions.BaseResolvers = options.Resolvers
+	}
 	if sliceutil.Contains(options.IPVersion, "6") {
 		dnsOptions.QuestionTypes = append(dnsOptions.QuestionTypes, dns.TypeAAAA)
 	}
