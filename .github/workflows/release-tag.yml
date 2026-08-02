@@ -21,10 +21,9 @@ on:
       version-bump:
         description: Strategy for the next version
         required: true
-        default: auto
+        default: patch
         type: choice
         options:
-          - auto
           - patch
           - custom
       custom-version:
@@ -66,47 +65,26 @@ jobs:
             fi
           fi
 
-      - name: Create scheduled tag
-        if: github.event_name == 'schedule' && steps.check-commits.outputs.has_changes == 'true'
-        id: scheduled-tag
-        uses: projectdiscovery/actions/svu-next@v1.29.4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag-prefix: v
-          v0: 'true'
-          set-failed: 'true'
-
-      - name: Compute next tag preview (manual)
-        if: github.event_name == 'workflow_dispatch'
-        id: manual-preview
-        uses: projectdiscovery/actions/svu-next@v1.29.4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          dry-run: 'true'
-          tag-prefix: v
-          v0: 'true'
-          set-failed: 'false'
-
-      - name: Resolve manual tag
-        if: github.event_name == 'workflow_dispatch'
-        id: manual-resolve
+      - name: Resolve target tag
+        id: resolve-tag
         env:
+          EVENT_NAME: ${{ github.event_name }}
+          HAS_CHANGES: ${{ steps.check-commits.outputs.has_changes }}
           VERSION_BUMP: ${{ inputs.version-bump }}
           CUSTOM_VERSION: ${{ inputs.custom-version }}
-          PREVIEW_TAG: ${{ steps.manual-preview.outputs.next-tag }}
         run: |
           current_tag="$(git describe --tags --abbrev=0 2>/dev/null || true)"
           if [ -z "$current_tag" ]; then
             current_tag="v0.0.0"
           fi
 
-          case "$VERSION_BUMP" in
-            auto)
-              target_tag="$PREVIEW_TAG"
-              if [ -z "$target_tag" ]; then
-                target_tag="$current_tag"
-              fi
-              ;;
+          if [ "$EVENT_NAME" = "schedule" ]; then
+            bump_mode="patch"
+          else
+            bump_mode="$VERSION_BUMP"
+          fi
+
+          case "$bump_mode" in
             patch)
               version="${current_tag#v}"
               version="${version%%-*}"
@@ -131,18 +109,31 @@ jobs:
               esac
               ;;
             *)
-              echo "::error::Unsupported version-bump: $VERSION_BUMP"
+              echo "::error::Unsupported version-bump: $bump_mode"
               exit 1
               ;;
           esac
 
           echo "current_tag=$current_tag" >> "$GITHUB_OUTPUT"
           echo "target_tag=$target_tag" >> "$GITHUB_OUTPUT"
+          echo "bump_mode=$bump_mode" >> "$GITHUB_OUTPUT"
+
+      - name: Create scheduled tag
+        if: github.event_name == 'schedule' && steps.check-commits.outputs.has_changes == 'true'
+        env:
+          TARGET_TAG: ${{ steps.resolve-tag.outputs.target_tag }}
+        run: |
+          if git rev-parse "$TARGET_TAG" >/dev/null 2>&1; then
+            echo "::error::Tag already exists: $TARGET_TAG"
+            exit 1
+          fi
+          git tag "$TARGET_TAG"
+          git push origin "$TARGET_TAG"
 
       - name: Create manual tag
         if: github.event_name == 'workflow_dispatch' && inputs.run-mode == 'auto'
         env:
-          TARGET_TAG: ${{ steps.manual-resolve.outputs.target_tag }}
+          TARGET_TAG: ${{ steps.resolve-tag.outputs.target_tag }}
         run: |
           if [ -z "$TARGET_TAG" ]; then
             echo "::error::No target tag was resolved."
@@ -158,13 +149,11 @@ jobs:
       - name: Summarize tag result
         env:
           EVENT_NAME: ${{ github.event_name }}
-          SCHEDULED_TAG: ${{ steps.scheduled-tag.outputs.tag }}
-          SCHEDULED_NEXT: ${{ steps.scheduled-tag.outputs.next-tag }}
           HAS_CHANGES: ${{ steps.check-commits.outputs.has_changes }}
           MANUAL_MODE: ${{ inputs.run-mode }}
-          MANUAL_BUMP: ${{ inputs.version-bump }}
-          MANUAL_TAG: ${{ steps.manual-resolve.outputs.target_tag }}
-          MANUAL_CURRENT: ${{ steps.manual-resolve.outputs.current_tag }}
+          CURRENT_TAG: ${{ steps.resolve-tag.outputs.current_tag }}
+          TARGET_TAG: ${{ steps.resolve-tag.outputs.target_tag }}
+          BUMP_MODE: ${{ steps.resolve-tag.outputs.bump_mode }}
         run: |
           {
             echo "### 🔖 Release tag result"
@@ -172,19 +161,16 @@ jobs:
             if [ "$EVENT_NAME" = "schedule" ]; then
               echo "- Trigger: scheduled (weekly)"
               if [ "$HAS_CHANGES" = "true" ]; then
-                if [ -n "$SCHEDULED_TAG" ]; then
-                  echo "- Created tag: \`$SCHEDULED_TAG\`"
-                elif [ -n "$SCHEDULED_NEXT" ]; then
-                  echo "- Computed next tag: \`$SCHEDULED_NEXT\`"
-                fi
+                echo "- Created tag: \`$TARGET_TAG\`"
+                echo "- Version bump: \`patch\`"
               else
                 echo "- No new commits since last tag — skipped."
               fi
             else
               echo "- Trigger: manual"
-              echo "- Current tag: \`$MANUAL_CURRENT\`"
-              echo "- Resolved tag: \`$MANUAL_TAG\`"
+              echo "- Current tag: \`$CURRENT_TAG\`"
+              echo "- Resolved tag: \`$TARGET_TAG\`"
               echo "- Run mode: \`$MANUAL_MODE\`"
-              echo "- Version bump: \`$MANUAL_BUMP\`"
+              echo "- Version bump: \`$BUMP_MODE\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
